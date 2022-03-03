@@ -29,7 +29,7 @@ export class DotNetClient {
       parameters = swapKeysUsingMap(parameters, newKeyMap);
       params.push(...getSpawnParameterArray(parameters));
     }
-    return this.logAndExecute(params);
+    this.logAndExecute(params);
   }
 
   build(project: string, parameters?: dotnetBuildOptions): void {
@@ -38,7 +38,7 @@ export class DotNetClient {
       parameters = swapKeysUsingMap(parameters, buildKeyMap);
       params.push(...getSpawnParameterArray(parameters));
     }
-    return this.logAndExecute(params);
+    this.logAndExecute(params);
   }
 
   run(
@@ -71,7 +71,7 @@ export class DotNetClient {
       params.push(...getSpawnParameterArray(parameters));
     }
     if (!watch) {
-      return this.logAndExecute(params);
+      this.logAndExecute(params);
     } else {
       const slicedParams = params.slice(1).filter((x) => x.length);
       return this.logAndSpawn(slicedParams);
@@ -88,11 +88,11 @@ export class DotNetClient {
       parameters = swapKeysUsingMap(parameters, addPackageKeyMap);
       params.push(...getSpawnParameterArray(parameters));
     }
-    return this.logAndExecute(params);
+    this.logAndExecute(params);
   }
 
   addProjectReference(hostCsProj: string, targetCsProj: string): void {
-    return this.logAndExecute([`add`, hostCsProj, `reference`, targetCsProj]);
+    this.logAndExecute([`add`, hostCsProj, `reference`, targetCsProj]);
   }
 
   publish(
@@ -112,22 +112,22 @@ export class DotNetClient {
     if (extraParameters) {
       params.push(`${extraParameters}`);
     }
-    return this.logAndExecute(params);
+    this.logAndExecute(params);
   }
 
   installTool(tool: string): void {
     const cmd = [`tool`, `install`, tool];
-    return this.logAndExecute(cmd);
+    this.logAndExecute(cmd);
   }
 
   restorePackages(project: string): void {
     const cmd = [`restore`, project];
-    return this.logAndExecute(cmd);
+    this.logAndExecute(cmd);
   }
 
   restoreTools(): void {
     const cmd = [`tool`, `restore`];
-    return this.logAndExecute(cmd);
+    this.logAndExecute(cmd);
   }
 
   format(project: string, parameters?: dotnetFormatOptions): void {
@@ -136,7 +136,7 @@ export class DotNetClient {
       parameters = swapKeysUsingMap(parameters, formatKeyMap);
       params.push(...getSpawnParameterArray(parameters));
     }
-    return this.logAndExecute(params);
+    this.logAndExecute(params);
   }
 
   addProjectToSolution(solutionFile: string, project: string) {
@@ -163,19 +163,22 @@ export class DotNetClient {
   }
 
   private execute(params: string[]): Buffer {
-    return spawnSync(this.cliCommand.command, params, {
+    const proc = spawnSync(this.cliCommand.command, params, {
       cwd: this.cwd || process.cwd(),
-    })
-      .output.filter((buf) => buf !== null)
-      .reduce(
-        (acc, buf) => Buffer.concat([acc as Buffer, buf as Buffer]),
-        Buffer.from(''),
-      ) as Buffer;
+    });
+    let result = Buffer.alloc(0);
+    if (proc.stdout) {
+      result = Buffer.concat([result, proc.stdout]);
+    }
+    if (proc.stderr) {
+      result = Buffer.concat([result, proc.stderr]);
+    }
+    return result;
   }
 
   private logAndSpawn(params: string[]): ChildProcess {
     console.log(
-      `Executing Command: ${this.cliCommand.command} "${params.join('" "')}"`,
+      `Executing Command: ${this.cliCommand.command} ${params.join(' ')}`,
     );
     return spawn(this.cliCommand.command, params, {
       stdio: 'inherit',
